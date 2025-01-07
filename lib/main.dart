@@ -6,6 +6,83 @@ void main() {
   runApp(const MyApp());
 }
 
+class FavoritesList extends StatelessWidget {
+  const FavoritesList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<MyAppState>();
+
+    final favorites = state.favorites;
+
+    if (favorites.isEmpty) {
+      return Center(
+        child: Text("No Favorites yet!!"),
+      );
+    }
+
+    return Center(
+      child: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(15),
+            child: Text("You have ${favorites.length} favorites"),
+          ),
+          for (var pair in favorites)
+            ListTile(
+                leading: Icon(Icons.favorite), title: Text(pair.asSnakeCase)),
+        ],
+      ),
+    );
+  }
+}
+
+class GeneratorPage extends StatelessWidget {
+  const GeneratorPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    var pair = appState.current;
+
+    IconData icon;
+    if (appState.favorites.contains(pair)) {
+      icon = Icons.favorite;
+    } else {
+      icon = Icons.favorite_border;
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          MyCard(pair: pair),
+          SizedBox(height: 10),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  appState.addPairToFavorites(pair);
+                },
+                icon: Icon(icon),
+                label: Text('Like'),
+              ),
+              SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: () {
+                  appState.getRandomPair();
+                },
+                child: Text('Next'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -28,7 +105,7 @@ class MyApp extends StatelessWidget {
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
 
-  var favorites = [];
+  var favorites = <WordPair>[];
 
   void addPairToFavorites(WordPair addedPair) {
     if (favorites.contains(addedPair)) {
@@ -77,69 +154,63 @@ class MyCard extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  var selectedIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    final pair = appState.current;
-    final favorites = appState.favorites;
+    Widget page;
 
-    IconData icon;
-
-    if (favorites.contains(pair)) {
-      icon = Icons.favorite;
-    } else {
-      icon = Icons.favorite_border;
+    switch (selectedIndex) {
+      case 0:
+        page = GeneratorPage();
+      case 1:
+        page = FavoritesList();
+      default:
+        throw UnimplementedError("No Widget for $selectedIndex");
     }
 
-    return Scaffold(
-      body: Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Padding(
-              padding: EdgeInsets.all(
-                20,
+    return LayoutBuilder(builder: (context, constrains) {
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: constrains.maxWidth >= 500,
+                destinations: [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home),
+                    label: Text('Home'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.favorite),
+                    label: Text('Favorites'),
+                  ),
+                ],
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (value) {
+                  setState(() {
+                    selectedIndex = value;
+                  });
+                },
               ),
-              child: Text(
-                  "This is my first app ever using flutter after using React Native")),
-          MyCard(pair: pair),
-          SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: EdgeInsets.all(10),
-                child: ElevatedButton.icon(
-                    icon: Icon(icon),
-                    onPressed: () {
-                      appState.addPairToFavorites(pair);
-                    },
-                    label: Text("Like it!")),
+            ),
+            Expanded(
+              child: Container(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: page,
               ),
-              ElevatedButton(
-                  onPressed: () {
-                    appState.getRandomPair();
-                  },
-                  child: Text("Next")),
-            ],
-          ),
-          SizedBox(height: 10),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                favorites.first.asCamelCase,
-                style: TextStyle(
-                    color: Colors.blueAccent,
-                    fontFamily: FontStyle.italic.name,
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold),
-              ),
-            ],
-          )
-        ]),
-      ),
-    );
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
